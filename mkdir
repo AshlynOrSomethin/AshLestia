@@ -1,0 +1,162 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+
+Rectangle {
+    id: appLauncher
+    
+    // Size to fit your vertical taskbar
+    width: 40
+    height: parent.height
+    color: "transparent"
+    
+    ListView {
+        id: appList
+        anchors.fill: parent
+        orientation: ListView.Vertical
+        spacing: 5
+        clip: true
+        
+        // Your pinned apps - customize these!
+        model: ListModel {
+            ListElement { 
+                name: "Terminal"
+                icon: "🖥️"
+                command: "kitty"
+                active: false
+            }
+            ListElement { 
+                name: "File Manager"
+                icon: "📁"
+                command: "thunar"
+                active: false
+            }
+            ListElement { 
+                name: "Code Editor"
+                icon: "💻"
+                command: "code"
+                active: false
+            }
+            ListElement { 
+                name: "Firefox"
+                icon: "🌐"
+                command: "firefox"
+                active: false
+            }
+            ListElement { 
+                name: "Discord"
+                icon: "💬"
+                command: "discord"
+                active: false
+            }
+            ListElement { 
+                name: "Spotify"
+                icon: "🎵"
+                command: "spotify"
+                active: false
+            }
+        }
+        
+        delegate: Rectangle {
+            id: appIcon
+            width: 40
+            height: 40
+            radius: 8
+            
+            // Colors
+            color: model.active ? Qt.rgba(79/255, 172/255, 254/255, 0.3) : Qt.rgba(1, 1, 1, 0.1)
+            border.width: model.active ? 1 : 0
+            border.color: Qt.rgba(79/255, 172/255, 254/255, 0.5)
+            
+            property bool hovered: false
+            
+            // App icon
+            Text {
+                anchors.centerIn: parent
+                text: model.icon
+                font.pixelSize: 18
+            }
+            
+            // Active indicator dot
+            Rectangle {
+                visible: model.active
+                width: 3
+                height: 6
+                radius: 2
+                color: "#4facfe"
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: -5
+            }
+            
+            // Click handler
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: appIcon.hovered = true
+                onExited: appIcon.hovered = false
+                onClicked: launchApp(model.command, index)
+                
+                // Tooltip
+                ToolTip {
+                    visible: parent.containsMouse
+                    text: model.name
+                    delay: 500
+                }
+            }
+            
+            // Smooth hover effects
+            Behavior on color { 
+                ColorAnimation { duration: 200 } 
+            }
+            
+            transform: Translate {
+                x: appIcon.hovered ? -2 : 0
+                Behavior on x { 
+                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic } 
+                }
+            }
+            
+            // Hover color change
+            states: State {
+                when: hovered && !model.active
+                PropertyChanges { 
+                    target: appIcon
+                    color: Qt.rgba(1, 1, 1, 0.2) 
+                }
+            }
+        }
+    }
+    
+    // Functions
+    function launchApp(command, index) {
+        console.log("Launching:", command)
+        
+        // Set this app as active, others as inactive
+        for (var i = 0; i < appList.model.count; i++) {
+            appList.model.setProperty(i, "active", i === index)
+        }
+        
+        // Launch using Qt.openUrlExternally
+        Qt.openUrlExternally("file:///usr/bin/" + command)
+    }
+    
+    // Add new app to taskbar (call this when apps open)
+    function addApp(name, icon, command) {
+        appList.model.append({
+            name: name,
+            icon: icon,
+            command: command,
+            active: true
+        })
+    }
+    
+    // Remove app from taskbar (call this when apps close)
+    function removeApp(command) {
+        for (var i = 0; i < appList.model.count; i++) {
+            if (appList.model.get(i).command === command) {
+                appList.model.remove(i)
+                break
+            }
+        }
+    }
+}

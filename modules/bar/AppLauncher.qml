@@ -1,0 +1,1 @@
+/home/ashlyn/.config/quickshell/caelestia/modules/bar/components/AppLauncher.qml
