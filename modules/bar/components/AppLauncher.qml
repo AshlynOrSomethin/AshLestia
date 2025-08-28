@@ -90,6 +90,14 @@ Rectangle {
                 lastLaunched: 0
             }
             ListElement {
+                name: "System Settings"
+                icon: "⚙️"
+                command: "systemsettings"
+                processName: "systemsettings"
+                active: false
+                lastLaunched: 0
+            }
+            ListElement {
                 name: "Terminal"
                 icon: "🖥️"
                 command: "konsole"

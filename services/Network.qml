@@ -16,12 +16,12 @@ Singleton {
 
     function enableWifi(enabled: bool): void {
         const cmd = enabled ? "on" : "off";
-        enableWifiProc.exec(["nmcli", "radio", "wifi", cmd]);
+        enableWifiProc.exec(["distrobox-host-exec", "sh", "-c", `nmcli radio wifi ${cmd}`]);
     }
 
     function toggleWifi(): void {
         const cmd = wifiEnabled ? "off" : "on";
-        enableWifiProc.exec(["nmcli", "radio", "wifi", cmd]);
+        enableWifiProc.exec(["distrobox-host-exec", "sh", "-c", `nmcli radio wifi ${cmd}`]);
     }
 
     function rescanWifi(): void {
@@ -29,13 +29,17 @@ Singleton {
     }
 
     function connectToNetwork(ssid: string, password: string): void {
-        // TODO: Implement password
-        connectProc.exec(["nmcli", "conn", "up", ssid]);
+        if (password && password.length > 0) {
+            connectProc.exec(["distrobox-host-exec", "sh", "-c", `nmcli device wifi connect "${ssid}" password "${password}"`]);
+        } else {
+            // For open networks or already known networks
+            connectProc.exec(["distrobox-host-exec", "sh", "-c", `nmcli device wifi connect "${ssid}"`]);
+        }
     }
 
     function disconnectFromNetwork(): void {
         if (active) {
-            disconnectProc.exec(["nmcli", "connection", "down", active.ssid]);
+            disconnectProc.exec(["distrobox-host-exec", "sh", "-c", `nmcli connection down "${active.ssid}"`]);
         }
     }
 
@@ -45,7 +49,7 @@ Singleton {
 
     Process {
         running: true
-        command: ["nmcli", "m"]
+        command: ["distrobox-host-exec", "sh", "-c", "nmcli monitor"]
         stdout: SplitParser {
             onRead: getNetworks.running = true
         }
@@ -55,11 +59,11 @@ Singleton {
         id: wifiStatusProc
 
         running: true
-        command: ["nmcli", "radio", "wifi"]
+        command: ["distrobox-host-exec", "sh", "-c", "nmcli radio wifi"]
         environment: ({
-                LANG: "C",
-                LC_ALL: "C"
-            })
+            LANG: "C",
+            LC_ALL: "C"
+        })
         stdout: StdioCollector {
             onStreamFinished: {
                 root.wifiEnabled = text.trim() === "enabled";
@@ -79,7 +83,7 @@ Singleton {
     Process {
         id: rescanProc
 
-        command: ["nmcli", "dev", "wifi", "list", "--rescan", "yes"]
+        command: ["distrobox-host-exec", "sh", "-c", "nmcli device wifi list --rescan yes"]
         onExited: {
             getNetworks.running = true;
         }
@@ -108,11 +112,11 @@ Singleton {
         id: getNetworks
 
         running: true
-        command: ["nmcli", "-g", "ACTIVE,SIGNAL,FREQ,SSID,BSSID,SECURITY", "d", "w"]
+        command: ["distrobox-host-exec", "sh", "-c", "nmcli -t -f ACTIVE,SIGNAL,FREQ,SSID,BSSID,SECURITY device wifi"]
         environment: ({
-                LANG: "C",
-                LC_ALL: "C"
-            })
+            LANG: "C",
+            LC_ALL: "C"
+        })
         stdout: StdioCollector {
             onStreamFinished: {
                 const PLACEHOLDER = "STRINGWHICHHOPEFULLYWONTBEUSED";
@@ -124,10 +128,10 @@ Singleton {
                     return {
                         active: net[0] === "yes",
                         strength: parseInt(net[1]),
-                        frequency: parseInt(net[2]),
-                        ssid: net[3],
-                        bssid: net[4]?.replace(rep2, ":") ?? "",
-                        security: net[5] || ""
+                                                                frequency: parseInt(net[2]),
+                                                                ssid: net[3],
+                                                                bssid: net[4]?.replace(rep2, ":") ?? "",
+                                                                security: net[5] || ""
                     };
                 }).filter(n => n.ssid && n.ssid.length > 0);
 
